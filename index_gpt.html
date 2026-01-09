@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <title>Modern Course Management System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Tailwind Custom Theme -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#2563eb',
+            secondary: '#64748b',
+            accent: '#10b981',
+            background: '#f8fafc',
+            text: '#1e293b'
+          },
+          borderRadius: {
+            DEFAULT: '8px'
+          },
+          boxShadow: {
+            soft: '0 10px 25px rgba(0,0,0,0.08)'
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
+
+  <!-- React 18 -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Framer Motion -->
+  <script src="https://unpkg.com/framer-motion/dist/framer-motion.umd.js"></script>
+
+</head>
+<body class="h-full bg-background text-text dark:bg-slate-900 dark:text-slate-100">
+
+<div id="root" class="h-full"></div>
+
+<script type="text/javascript">
+/* -----------------------------------------------------
+   UTILITIES, TYPES (JSDoc), MOCK SERVICES
+----------------------------------------------------- */
+
+/**
+ * @typedef {{ id: number, title: string, progress: number }} Course
+ * @typedef {{ id: number, name: string, status: 'active'|'pending'|'inactive' }} Student
+ */
+
+const { useState, useEffect, useMemo, useContext, createContext } = React;
+const { motion } = window['framer-motion'];
+
+/* Mock Auth / RBAC */
+const AuthContext = createContext(null);
+
+function AuthProvider({ children }) {
+  const [role] = useState('admin'); // admin | instructor | student
+  return React.createElement(AuthContext.Provider, { value: { role } }, children);
+}
+
+/* i18n */
+const translations = {
+  en: { dashboard: 'Dashboard', courses: 'Courses', students: 'Students' },
+  es: { dashboard: 'Tablero', courses: 'Cursos', students: 'Estudiantes' }
+};
+
+/* Toast System */
+const ToastContext = createContext(null);
+
+function ToastProvider({ children }) {
+  const [toasts, setToasts] = useState([]);
+
+  function notify(message) {
+    setToasts(t => [...t, message]);
+    setTimeout(() => setToasts(t => t.slice(1)), 3000);
+  }
+
+  return (
+    React.createElement(ToastContext.Provider, { value: notify },
+      children,
+      React.createElement('div', { className: 'fixed bottom-4 right-4 space-y-2 z-50' },
+        toasts.map((t, i) =>
+          React.createElement('div', {
+            key: i,
+            className: 'bg-primary text-white px-4 py-2 rounded shadow-soft'
+          }, t)
+        )
+      )
+    )
+  );
+}
+
+/* -----------------------------------------------------
+   COMPONENTS
+----------------------------------------------------- */
+
+function Sidebar({ current, setCurrent }) {
+  const items = ['dashboard', 'courses', 'students', 'analytics'];
+  return (
+    React.createElement('aside', {
+      className: 'w-64 bg-white dark:bg-slate-800 shadow-soft p-4 hidden md:block'
+    },
+      items.map(i =>
+        React.createElement('button', {
+          key: i,
+          onClick: () => setCurrent(i),
+          className: `block w-full text-left px-3 py-2 rounded transition
+            ${current === i ? 'bg-primary text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-700'}`
+        }, i.toUpperCase())
+      )
+    )
+  );
+}
+
+function MetricCard({ label, value }) {
+  return (
+    React.createElement('div', {
+      className: 'bg-gradient-to-br from-primary to-blue-500 text-white p-4 rounded shadow-soft'
+    },
+      React.createElement('div', { className: 'text-sm opacity-80' }, label),
+      React.createElement('div', { className: 'text-2xl font-semibold' }, value)
+    )
+  );
+}
+
+function Dashboard() {
+  useEffect(() => {
+    const ctx = document.getElementById('chart');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ['Mon','Tue','Wed','Thu','Fri'],
+        datasets: [{
+          label: 'Enrollments',
+          data: [12, 19, 8, 15, 22],
+          borderColor: '#10b981',
+          tension: 0.4
+        }]
+      },
+      options: { responsive: true }
+    });
+  }, []);
+
+  return (
+    React.createElement('div', { className: 'space-y-6' },
+      React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-4' },
+        React.createElement(MetricCard, { label: 'Total Courses', value: 24 }),
+        React.createElement(MetricCard, { label: 'Active Students', value: 312 }),
+        React.createElement(MetricCard, { label: 'Completion Rate', value: '86%' })
+      ),
+      React.createElement('div', { className: 'bg-white dark:bg-slate-800 p-4 rounded shadow-soft' },
+        React.createElement('canvas', { id: 'chart', height: 100 })
+      )
+    )
+  );
+}
+
+function Courses() {
+  const courses = useMemo(() => [
+    { id: 1, title: 'React Fundamentals', progress: 70 },
+    { id: 2, title: 'Advanced TypeScript', progress: 45 }
+  ], []);
+
+  return (
+    React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+      courses.map(c =>
+        React.createElement('div', {
+          key: c.id,
+          className: 'bg-white dark:bg-slate-800 p-4 rounded shadow-soft'
+        },
+          React.createElement('h3', { className: 'font-semibold' }, c.title),
+          React.createElement('div', { className: 'mt-2 h-2 bg-slate-200 rounded' },
+            React.createElement('div', {
+              className: 'h-2 bg-accent rounded',
+              style: { width: c.progress + '%' }
+            })
+          )
+        )
+      )
+    )
+  );
+}
+
+function Students() {
+  const students = [
+    { id: 1, name: 'Jane Doe', status: 'active' },
+    { id: 2, name: 'John Smith', status: 'pending' }
+  ];
+
+  return (
+    React.createElement('table', { className: 'w-full bg-white dark:bg-slate-800 rounded shadow-soft' },
+      React.createElement('thead', null,
+        React.createElement('tr', { className: 'text-left border-b' },
+          React.createElement('th', { className: 'p-3' }, 'Name'),
+          React.createElement('th', { className: 'p-3' }, 'Status')
+        )
+      ),
+      React.createElement('tbody', null,
+        students.map(s =>
+          React.createElement('tr', { key: s.id, className: 'border-b last:border-none' },
+            React.createElement('td', { className: 'p-3' }, s.name),
+            React.createElement('td', { className: 'p-3' },
+              React.createElement('span', {
+                className: `px-2 py-1 text-sm rounded
+                ${s.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`
+              }, s.status)
+            )
+          )
+        )
+      )
+    )
+  );
+}
+
+function App() {
+  const [current, setCurrent] = useState('dashboard');
+  const [dark, setDark] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark);
+  }, [dark]);
+
+  return (
+    React.createElement(AuthProvider, null,
+      React.createElement(ToastProvider, null,
+        React.createElement('div', { className: 'flex h-full' },
+          React.createElement(Sidebar, { current, setCurrent }),
+          React.createElement('main', { className: 'flex-1 p-6 space-y-6' },
+            React.createElement('div', { className: 'flex justify-between items-center' },
+              React.createElement('h1', { className: 'text-2xl font-semibold' }, current.toUpperCase()),
+              React.createElement('button', {
+                onClick: () => setDark(d => !d),
+                className: 'px-3 py-2 rounded bg-secondary text-white'
+              }, dark ? 'Light Mode' : 'Dark Mode')
+            ),
+            current === 'dashboard' && React.createElement(Dashboard),
+            current === 'courses' && React.createElement(Courses),
+            current === 'students' && React.createElement(Students),
+            current === 'analytics' && React.createElement(Dashboard)
+          )
+        )
+      )
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+
+</body>
+</html>
+
